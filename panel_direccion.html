@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root { --bg: #0f172a; --card: #1e293b; --text: #f1f5f9; --accent: #facc15; --blue: #3b82f6; --red: #ef4444; }
+    
+    /* Recuperamos el centrado flex y el layout original */
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; display: flex; justify-content: center; }
+    
+    /* Contenedor que limita el ancho */
+    .wrap { width: 100%; max-width: 600px; }
+    
+    .header-dir { text-align: center; margin-bottom: 25px; }
+    .header-dir h1 { color: var(--accent); margin: 0; font-size: 2.2rem; letter-spacing: 1px; }
+    .header-dir p { color: #94a3b8; margin: 5px 0 0 0; font-weight: 600; text-transform: uppercase; font-size: 0.9rem; }
+
+    .card { background: var(--card); padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3); }
+    .mode-selector { display: flex; gap: 8px; margin-bottom: 15px; background: #0f172a; padding: 4px; border-radius: 8px; }
+    .mode-btn { flex: 1; padding: 10px; border: none; border-radius: 6px; background: transparent; color: #94a3b8; cursor: pointer; font-weight: bold; font-size: 0.85rem; }
+    .mode-btn.active { background: var(--blue); color: white; }
+    
+    label { font-size: 0.85rem; color: #94a3b8; font-weight: 600; }
+    input, textarea, select { width: 100%; padding: 10px; margin: 5px 0 15px 0; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; box-sizing: border-box; font-size: 1rem; }
+    .grid-dates { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    
+    .btn-save { background: var(--blue); color: white; padding: 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; font-size: 1rem; transition: all 0.2s; }
+    .btn-save:disabled { background: #334155; cursor: not-allowed; opacity: 0.7; }
+    
+    .hidden { display: none; }
+    .msg-item { border-bottom: 1px solid #334155; padding: 15px 0; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; animation: fadeIn 0.3s; }
+    .msg-item:last-child { border: none; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .orange-text { color: #fdba74; font-weight: 600; font-size: 1rem; line-height: 1.4; display: block; }
+    .meta-info { font-size: 0.8rem; color: #64748b; margin-top: 5px; }
+    
+    .btn-del { color: var(--red); border: 1px solid rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.1); cursor: pointer; padding: 6px 10px; border-radius: 6px; font-size: 0.8rem; }
+    .btn-del:hover { background: var(--red); color: white; }
+
+    /* ESTILO PARA EL ICONO DE CALENDARIO BLANCO */
+    ::-webkit-calendar-picker-indicator {
+        filter: invert(1);
+        cursor: pointer;
+        opacity: 0.8;
+    }
+    ::-webkit-calendar-picker-indicator:hover {
+        opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header-dir">
+      <h1>BURU-ASISTENCIA</h1>
+      <p>Panel de Dirección</p>
+    </div>
+
+    <div class="card">
+      <div class="mode-selector">
+        <button class="mode-btn active" id="btnHoy" onclick="setModo('hoy', this)">Solo Hoy</button>
+        <button class="mode-btn" id="btnRango" onclick="setModo('rango', this)">Varios Días</button>
+      </div>
+      <form id="msgForm" onsubmit="prepararYGuardar(event)">
+        <label>Aviso a mostrar:</label>
+        <textarea id="texto" rows="3" required placeholder="Ej: Recordad que hoy hay claustro..."></textarea>
+        
+        <div id="rowFechas" class="grid-dates hidden">
+          <div><label>Fecha Inicio:</label><input type="date" id="fechaIni"></div>
+          <div><label>Fecha Fin:</label><input type="date" id="fechaFin"></div>
+        </div>
+        
+        <div class="grid-dates">
+          <div><label>Desde:</label><select id="pInicio"></select></div>
+          <div><label>Hasta:</label><select id="pFin"></select></div>
+        </div>
+        
+        <button type="submit" class="btn-save" id="btnSave">PUBLICAR AHORA</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h3 style="margin:0 0 15px 0; font-size: 1rem; color: var(--accent);">📋 HISTORIAL DE AVISOS (Activos)</h3>
+      <div id="lista"><p style="color:#64748b; font-size:0.9rem;">Cargando historial...</p></div>
+    </div>
+  </div>
+
+  <script>
+    const PERIODOS = [
+      { label: "1ª Hora", start: "08:30", end: "09:25" },
+      { label: "2ª Hora", start: "09:25", end: "10:20" },
+      { label: "3ª Hora", start: "10:20", end: "11:15" },
+      { label: "Recreo",  start: "11:15", end: "11:45" },
+      { label: "4ª Hora", start: "11:45", end: "12:40" },
+      { label: "5ª Hora", start: "12:40", end: "13:35" },
+      { label: "6ª Hora", start: "13:35", end: "14:30" }
+    ];
+
+    let modoActual = 'hoy';
+    let lastSignature = ""; 
+
+    function initSelectors() {
+      const sI = document.getElementById('pInicio');
+      const sF = document.getElementById('pFin');
+      sI.innerHTML = ""; sF.innerHTML = "";
+      PERIODOS.forEach(p => {
+        sI.innerHTML += `<option value="${p.start}" data-label="${p.label}">${p.label} (${p.start})</option>`;
+        sF.innerHTML += `<option value="${p.end}" data-label="${p.label}">${p.label} (${p.end})</option>`;
+      });
+      sF.value = "14:30";
+    }
+
+    function setModo(m, btn) {
+      modoActual = m;
+      document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('rowFechas').classList.toggle('hidden', m !== 'rango');
+    }
+
+    function prepararYGuardar(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnSave');
+      const sI = document.getElementById('pInicio');
+      const sF = document.getElementById('pFin');
+      const hoy = new Date().toISOString().split('T')[0];
+      
+      btn.disabled = true;
+      btn.textContent = "🚀 TRAMITANDO...";
+
+      const datos = {
+        texto: document.getElementById('texto').value,
+        inicio: (modoActual === 'hoy' ? hoy : document.getElementById('fechaIni').value) + 'T' + sI.value,
+        fin: (modoActual === 'hoy' ? hoy : document.getElementById('fechaFin').value) + 'T' + sF.value,
+        periodoDesde: sI.options[sI.selectedIndex].getAttribute('data-label'),
+        periodoHasta: sF.options[sF.selectedIndex].getAttribute('data-label')
+      };
+
+      google.script.run.withSuccessHandler(() => {
+        document.getElementById('msgForm').reset();
+        btn.disabled = false;
+        btn.textContent = "PUBLICAR AHORA";
+        initSelectors();
+        lastSignature = ""; 
+        cargar(); 
+      }).guardarMensajeDireccion(datos);
+    }
+
+    // === FUNCIÓN DE CARGA AUTOMÁTICA (POLLING) ===
+    function cargar() {
+      google.script.run.withSuccessHandler(msgsAll => {
+        const div = document.getElementById('lista');
+        
+        // === FILTRO: Eliminamos los que ya han caducado (fecha fin < ahora) ===
+        const now = new Date();
+        const msgs = (msgsAll || []).filter(m => {
+             // m.fin es string ISO 'YYYY-MM-DDTHH:mm'
+             return new Date(m.fin) > now;
+        });
+
+        const currentSignature = JSON.stringify(msgs);
+        
+        if (currentSignature !== lastSignature) {
+            lastSignature = currentSignature; 
+
+            if(!msgs || msgs.length === 0) {
+                div.innerHTML = "<p style='color:#64748b; font-size:0.9rem;'>No hay avisos activos.</p>";
+            } else {
+                div.innerHTML = msgs.map(m => `
+                <div class="msg-item">
+                    <div style="flex:1;">
+                    <span class="orange-text">"${m.texto}"</span>
+                    <div class="meta-info">
+                        👤 ${m.autor} | <span style="color:var(--accent)">${m.ts_str} (${m.periodoDesde} - ${m.periodoHasta})</span>
+                    </div>
+                    </div>
+                    <button class="btn-del" onclick="borrar('${m.id}')">Eliminar</button>
+                </div>`).join('');
+            }
+        }
+        
+        setTimeout(cargar, 4000);
+
+      }).withFailureHandler(() => {
+         setTimeout(cargar, 6000);
+      }).listarMensajesAdmin();
+    }
+
+    function borrar(id) {
+      if(confirm('¿Seguro que quieres eliminar este aviso?')) {
+        google.script.run.withSuccessHandler(() => {
+            lastSignature = "";
+            cargar();
+        }).borrarMensajeDireccion(id);
+      }
+    }
+
+    window.onload = () => {
+      initSelectors();
+      const h = new Date(); const m = new Date(); m.setDate(h.getDate() + 1);
+      document.getElementById('fechaIni').value = h.toISOString().split('T')[0];
+      document.getElementById('fechaFin').value = m.toISOString().split('T')[0];
+      cargar(); 
+    };
+  </script>
+</body>
+</html>

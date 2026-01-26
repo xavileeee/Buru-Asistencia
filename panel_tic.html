@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <title>Panel TIC</title>
+  <style>
+    /* === ESTILOS GENERALES (TEMA TIC) === */
+    html, body { height:100%; margin:0; font-family: 'Segoe UI', sans-serif; background:#0f172a; color:#e2e8f0; }
+    .wrap { max-width:1400px; margin:0 auto; padding:20px; }
+    
+    /* === HEADER CON RELOJ (Igual que Sala Guardia pero estilo TIC) === */
+    .header-container { text-align: center; margin-bottom: 30px; padding-top: 10px; }
+    h1 { margin: 0; font-size: 3.5em; color: #22d3ee; text-shadow: 0 4px 10px rgba(0,0,0,0.5); letter-spacing: 2px; font-weight: 800; text-transform: uppercase; }
+    .subtitulo { margin-top: 5px; font-size: 1.8em; color: #94a3b8; font-weight: 400; letter-spacing: 1px; }
+
+    /* STATUS BAR (Adaptada a colores azules/cian) */
+    .status-bar {
+      background: #0ea5e9; /* Azul más vivo */
+      color: white; padding: 20px 40px; border-radius: 16px; margin-bottom: 30px;
+      display: flex; align-items: center; justify-content: space-between;
+      box-shadow: 0 6px 20px rgba(14, 165, 233, 0.4); font-size: 2.2em; gap: 30px;
+    }
+    .clock-now { font-weight: 800; font-size: 1.2em; font-family: monospace; letter-spacing: -2px; min-width: 220px; text-shadow: 2px 2px 4px rgba(0,0,0,0.2); text-align: center; }
+    .period-info { flex-grow: 1; text-align: center; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 1px 1px 3px rgba(0,0,0,0.2); }
+    .progress-container { width: 30%; min-width: 200px; height: 24px; background: rgba(255, 255, 255, 0.3); border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.2); }
+    .progress-fill { height: 100%; background: #ffffff; width: 0%; transition: width 1s linear; border-radius: 12px; box-shadow: 0 0 15px rgba(255,255,255,0.6); }
+
+    /* === GRID DE TARJETAS === */
+    .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:15px; }
+    
+    .card { background:#1e293b; border-left:6px solid #22d3ee; padding:20px; border-radius:8px; box-shadow:0 4px 6px rgba(0,0,0,0.3); animation: fadein 0.5s; position:relative; }
+    @keyframes fadein { from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:none;} }
+    
+    .aula { font-size:24px; font-weight:800; color:#f1f5f9; margin-bottom:5px; }
+    .hora { font-family:monospace; color:#22d3ee; font-weight:bold; }
+    .obs { background:rgba(0,0,0,0.2); padding:10px; margin-top:10px; border-radius:4px; color:#cbd5e1; }
+    
+    .btn { background:#0ea5e9; color:white; border:none; padding:8px 15px; border-radius:4px; font-weight:bold; cursor:pointer; float:right; margin-top:10px; }
+    .btn:hover { background:#0284c7; }
+    
+    .empty-state { text-align:center; color:#475569; margin-top:50px; font-size:1.2em; }
+    
+    @media (max-width: 900px){ .status-bar { flex-direction:column; text-align:center; } .progress-container{ width:100%; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    
+    <div class="status-bar">
+        <div id="clock-now" class="clock-now">--:--:--</div>
+        <div id="period-info" class="period-info">Cargando horario...</div>
+        <div class="progress-container">
+            <div id="progress-fill" class="progress-fill"></div>
+        </div>
+    </div>
+
+    <div class="header-container">
+      <h1>BURU-TIC</h1>
+      <div class="subtitulo">Gestión de Incidencias Informáticas</div>
+    </div>
+
+    <div id="list" class="grid"></div>
+    <div id="empty" class="empty-state">Todo funciona correctamente (por ahora) ☕</div>
+  </div>
+
+  <script>
+    const pollMs = 5000; 
+    let vistos = new Set();
+
+    // === HORARIOS (Para la barra de progreso) ===
+    const HORARIOS = [
+        { label: "1ª Hora", start: "08:30", end: "09:25" },
+        { label: "2ª Hora", start: "09:25", end: "10:20" },
+        { label: "3ª Hora", start: "10:20", end: "11:15" },
+        { label: "Recreo",  start: "11:15", end: "11:45" },
+        { label: "4ª Hora", start: "11:45", end: "12:40" },
+        { label: "5ª Hora", start: "12:40", end: "13:35" },
+        { label: "6ª Hora", start: "13:35", end: "14:30" }
+    ];
+
+    function updateClock() {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const dateStr = now.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+
+        document.getElementById('clock-now').innerHTML = 
+            `<div style="line-height:1; font-weight: 900; letter-spacing: -2px;">${timeStr}</div>` + 
+            `<div style="font-size: 0.75em; letter-spacing: -0.5px; margin-top: 5px; color: #bae6fd; font-weight: 600; text-transform: none; line-height:1;">` + 
+            dateStr + 
+            `</div>`;
+        
+        const diaSemana = now.toLocaleDateString('es-ES', { weekday: 'long' }).toUpperCase();
+        const nowMins = (now.getHours() * 60) + now.getMinutes() + (now.getSeconds() / 60);
+        
+        let currentPeriod = null; let nextPeriod = null;
+        const toMins = (str) => { const parts = str.split(':'); return (parseInt(parts[0]) * 60) + parseInt(parts[1]); };
+
+        for (let i = 0; i < HORARIOS.length; i++) {
+            const p = HORARIOS[i];
+            const start = toMins(p.start);
+            const end = toMins(p.end);
+            if (nowMins >= start && nowMins < end) { currentPeriod = { ...p, startMins: start, endMins: end }; break; }
+            if (nowMins < start) { nextPeriod = p; break; }
+        }
+
+        const infoDiv = document.getElementById('period-info');
+        const progFill = document.getElementById('progress-fill');
+
+        if (currentPeriod) {
+            infoDiv.textContent = `${diaSemana} - ${currentPeriod.label} (${currentPeriod.start} – ${currentPeriod.end})`;
+            const totalDuration = currentPeriod.endMins - currentPeriod.startMins;
+            const elapsed = nowMins - currentPeriod.startMins;
+            const percent = Math.min(100, Math.max(0, (elapsed / totalDuration) * 100));
+            progFill.style.width = percent + '%';
+        } else if (nextPeriod) {
+            infoDiv.textContent = `${diaSemana} - Próximo: ${nextPeriod.label} a las ${nextPeriod.start}`;
+            progFill.style.width = '0%';
+        } else {
+            infoDiv.textContent = `${diaSemana} - Fuera de horario lectivo 💤`;
+            progFill.style.width = '100%';
+        }
+    }
+    setInterval(updateClock, 1000);
+
+    // === LÓGICA DE CARGA DE DATOS ===
+    function tick(){
+      google.script.run.withSuccessHandler(function(resp){
+          const items = (resp && resp.items) ? resp.items : [];
+          const serverIds = new Set(items.map(it => it.id));
+          const list = document.getElementById('list');
+          const empty = document.getElementById('empty');
+          
+          empty.style.display = items.length ? 'none' : 'block';
+
+          items.forEach(it => {
+            if (!vistos.has(it.id)) {
+              vistos.add(it.id);
+              const card = document.createElement('div');
+              card.id = 'card-' + it.id;
+              card.className = 'card';
+              card.innerHTML = `
+                <div class="aula">${esc(it.aula)}</div>
+                <div class="hora">🕒 ${it.hora} | 👤 ${esc(it.profesor)}</div>
+                <div class="obs">${esc(it.observaciones || 'Sin detalles')}</div>
+                <button class="btn" onclick="cerrar('${it.id}', this)">✅ Hecho</button>
+              `;
+              list.prepend(card);
+            }
+          });
+
+          document.querySelectorAll('.card').forEach(c => {
+            const id = c.id.replace('card-', '');
+            if (!serverIds.has(id)) {
+              c.remove();
+              vistos.delete(id);
+            }
+          });
+
+          setTimeout(tick, pollMs);
+      }).listarPendientesTIC(); 
+    }
+
+    function cerrar(id, btn) {
+      btn.disabled = true; btn.innerText = "...";
+      google.script.run.withSuccessHandler(() => {
+        const c = document.getElementById('card-'+id);
+        if(c) c.remove();
+      }).marcarAtendida(id);
+    }
+
+    function esc(s) { return s ? String(s).replace(/[&<>"]/g, tag => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[tag])) : ''; }
+    
+    window.onload = () => {
+      updateClock();
+      tick();
+    };
+  </script>
+</body>
+</html>

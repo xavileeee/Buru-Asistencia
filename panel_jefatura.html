@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <title>Panel Jefatura</title>
+  <style>
+    /* === ESTILOS GENERALES === */
+    html, body { height:100%; margin:0; font-family: 'Segoe UI', sans-serif; background:#1e293b; color:#e2e8f0; }
+    .wrap { max-width:1400px; margin:0 auto; padding:20px; }
+    
+    /* === STATUS BAR AZUL === */
+    .status-bar {
+      background: #3b82f6; 
+      color: white; padding: 20px 40px; border-radius: 16px; margin-bottom: 30px;
+      display: flex; align-items: center; justify-content: space-between;
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5); font-size: 2.2em; gap: 30px;
+    }
+    .clock-now { min-width: 220px; text-align: center; }
+    .period-info { flex-grow: 1; text-align: center; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 1px 1px 3px rgba(0,0,0,0.2); }
+    .progress-container { width: 30%; min-width: 200px; height: 24px; background: rgba(255, 255, 255, 0.3); border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.2); }
+    .progress-fill { height: 100%; background: #ffffff; width: 0%; transition: width 1s linear; border-radius: 12px; box-shadow: 0 0 15px rgba(255,255,255,0.6); }
+
+    /* === CABECERA === */
+    .header-container { text-align: center; margin-bottom: 30px; padding-top: 10px; }
+    h1 { margin: 0; font-size: 3.5em; color: #facc15; text-shadow: 0 4px 10px rgba(0,0,0,0.5); letter-spacing: 2px; font-weight: 800; text-transform: uppercase; }
+    .subtitulo { margin-top: 5px; font-size: 1.8em; color: #94a3b8; font-weight: 400; letter-spacing: 1px; }
+
+    /* BARRA DE FILTROS */
+    .filter-bar {
+      background: #0f172a; padding: 15px; border-radius: 12px; margin-bottom: 25px;
+      display: flex; justify-content: center; gap: 30px; border: 1px solid #334155; flex-wrap: wrap;
+    }
+    .filter-item { display: flex; align-items: center; gap: 10px; font-size: 1.1em; font-weight: bold; cursor: pointer; user-select: none; }
+    .filter-item input { width: 18px; height: 18px; accent-color: #3b82f6; cursor: pointer; }
+
+    /* === ZONA AVISOS === */
+    .avisos-container { margin-bottom: 30px; display: flex; flex-direction: column; gap: 15px; }
+    .aviso-card {
+      background-color: #ffedd5; border-left: 10px solid #f97316; color: #9a3412;
+      padding: 15px 25px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+      animation: slideIn 0.5s ease-out; display: flex; flex-direction: column; gap: 10px;
+    }
+    .aviso-main { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+    .aviso-texto { font-size: 1.5em; font-weight: 600; text-align: left; }
+    .aviso-autor { font-size: 1em; font-weight: bold; opacity: 0.9; text-transform: uppercase; background: rgba(0,0,0,0.05); padding: 5px 10px; border-radius: 5px; white-space: nowrap; margin-left: 20px;}
+    .aviso-footer { font-size: 0.85em; color: #c2410c; align-self: flex-end; font-style: italic; opacity: 0.8; border-top: 1px solid rgba(0,0,0,0.05); padding-top: 5px; width: 100%; text-align: right; display: flex; justify-content: space-between; align-items: center;}
+
+    .btn-del-aviso { background: #ef4444; color: white; border: none; padding: 5px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.9em; }
+    .btn-del-aviso:hover { background: #dc2626; }
+    @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    /* GRID Y TARJETAS */
+    .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:15px; }
+    
+    .card { background:#334155; border-left:6px solid #64748b; padding:20px; border-radius:8px; box-shadow:0 4px 6px rgba(0,0,0,0.3); animation: fadein 0.5s; position:relative; transition: all 0.5s ease; }
+    @keyframes fadein { from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:none;} }
+    
+    .card-jefatura { border-left-color: #ef4444; background: #2a1b1b; } 
+    .card-tic { border-left-color: #0ea5e9; } 
+    .card-guardia { border-left-color: #10b981; }
+
+    /* === NUEVO: Estilo Dinámico para Retrasos === */
+    /* Mantenemos el color de fondo original, solo añadimos borde rojo y pulso */
+    .delayed-active {
+        box-shadow: 0 0 0 2px #ef4444 inset; /* Borde interno rojo */
+        animation: pulseRed 2s infinite; 
+    }
+
+    .warning-badge { 
+      display: inline-block; background: #dc2626; color: #fff; 
+      padding: 3px 8px; border-radius: 4px; font-size: 0.75em; 
+      font-weight: bold; margin-left: 8px; vertical-align: middle; 
+      border: 1px solid #ffaaaa; box-shadow: 0 0 5px rgba(0,0,0,0.5);
+      animation: fadeInBadge 0.5s;
+    }
+    @keyframes fadeInBadge { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+
+    @keyframes pulseRed { 
+      0% { box-shadow: 0 0 0 2px #ef4444 inset, 0 0 10px rgba(239, 68, 68, 0.3); } 
+      50% { box-shadow: 0 0 0 2px #ef4444 inset, 0 0 20px rgba(239, 68, 68, 0.6); } 
+      100% { box-shadow: 0 0 0 2px #ef4444 inset, 0 0 10px rgba(239, 68, 68, 0.3); } 
+    }
+
+    .aula { font-size:24px; font-weight:800; color:#f1f5f9; margin-bottom:5px; }
+    .hora { font-family:monospace; color:#cbd5e1; font-weight:bold; font-size: 0.9em; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.7em; text-transform: uppercase; margin-left: 10px; color: white; vertical-align: middle;}
+    .obs { background:rgba(0,0,0,0.2); padding:10px; margin-top:10px; border-radius:4px; color:#cbd5e1; }
+    
+    .btn { background:#475569; color:white; border:none; padding:8px 15px; border-radius:4px; font-weight:bold; cursor:pointer; float:right; margin-top:10px; transition: opacity 0.2s; }
+    .btn:hover { background:#64748b; }
+    
+    .empty-state { text-align:center; color:#64748b; margin-top:50px; font-size:1.2em; }
+    .hidden { display: none !important; }
+
+    @media (max-width: 900px){ .status-bar { flex-direction:column; text-align:center; } .progress-container{ width:100%; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    
+    <div class="status-bar">
+        <div id="clock-now" class="clock-now">--:--:--</div>
+        <div id="period-info" class="period-info">Cargando horario...</div>
+        <div class="progress-container">
+            <div id="progress-fill" class="progress-fill"></div>
+        </div>
+    </div>
+
+    <div class="header-container">
+      <h1>BURU-GUARDIA</h1>
+      <div class="subtitulo">Panel de Jefatura</div>
+    </div>
+
+    <div class="filter-bar">
+      <div class="filter-item">
+        <input type="checkbox" id="chkDireccion" onchange="tick()">
+        <label for="chkDireccion" style="color: #f97316;">Ver Avisos</label>
+      </div>
+      <div class="filter-item">
+        <input type="checkbox" id="chkGuardia" onchange="tick()">
+        <label for="chkGuardia" style="color: #10b981;">Ver Guardia</label>
+      </div>
+      <div class="filter-item">
+        <input type="checkbox" id="chkTic" onchange="tick()">
+        <label for="chkTic" style="color: #0ea5e9;">Ver TIC</label>
+      </div>
+      
+      <div class="filter-item" style="border-left: 1px solid #334155; padding-left: 20px;">
+        <input type="checkbox" id="chkRetrasos" onchange="tick()">
+        <label for="chkRetrasos" style="color: #ef4444; text-shadow: 0 0 10px rgba(239,68,68,0.3);">Ver Retrasos (>5min)</label>
+      </div>
+
+      <div class="filter-item" style="opacity: 0.5; cursor: default; margin-left: auto;">
+        <input type="checkbox" checked disabled>
+        <label style="color: #ef4444;">Ver Jefatura</label>
+      </div>
+    </div>
+
+    <div id="avisos-area" class="avisos-container hidden"></div>
+
+    <div id="list" class="grid"></div>
+    <div id="empty" class="empty-state">No hay avisos pendientes</div>
+  </div>
+
+  <script>
+    const pollMs = 5000; 
+    let vistos = new Set();
+    let ultimaFirmaAvisos = ""; 
+
+    // === HORARIOS ===
+    const HORARIOS = [
+        { label: "1ª Hora", start: "08:30", end: "09:25" },
+        { label: "2ª Hora", start: "09:25", end: "10:20" },
+        { label: "3ª Hora", start: "10:20", end: "11:15" },
+        { label: "Recreo",  start: "11:15", end: "11:45" },
+        { label: "4ª Hora", start: "11:45", end: "12:40" },
+        { label: "5ª Hora", start: "12:40", end: "13:35" },
+        { label: "6ª Hora", start: "13:35", end: "14:30" }
+    ];
+
+    function updateClock() {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const dateStr = now.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+
+        document.getElementById('clock-now').innerHTML = 
+            `<div style="line-height:1; font-weight: 900; letter-spacing: -2px;">${timeStr}</div>` + 
+            `<div style="font-size: 0.75em; letter-spacing: -0.5px; margin-top: 5px; color: #cbd5e1; font-weight: 600; text-transform: none; line-height:1;">` + 
+            dateStr + 
+            `</div>`;
+
+        const diaSemana = now.toLocaleDateString('es-ES', { weekday: 'long' }).toUpperCase();
+        const nowMins = (now.getHours() * 60) + now.getMinutes() + (now.getSeconds() / 60);
+        
+        let currentPeriod = null; let nextPeriod = null;
+        const toMins = (str) => { const parts = str.split(':'); return (parseInt(parts[0]) * 60) + parseInt(parts[1]); };
+
+        for (let i = 0; i < HORARIOS.length; i++) {
+            const p = HORARIOS[i];
+            const start = toMins(p.start);
+            const end = toMins(p.end);
+            if (nowMins >= start && nowMins < end) { currentPeriod = { ...p, startMins: start, endMins: end }; break; }
+            if (nowMins < start) { nextPeriod = p; break; }
+        }
+
+        const infoDiv = document.getElementById('period-info');
+        const progFill = document.getElementById('progress-fill');
+
+        if (currentPeriod) {
+            infoDiv.textContent = `${diaSemana} - ${currentPeriod.label} (${currentPeriod.start} – ${currentPeriod.end})`;
+            const totalDuration = currentPeriod.endMins - currentPeriod.startMins;
+            const elapsed = nowMins - currentPeriod.startMins;
+            const percent = Math.min(100, Math.max(0, (elapsed / totalDuration) * 100));
+            progFill.style.width = percent + '%';
+        } else if (nextPeriod) {
+            infoDiv.textContent = `${diaSemana} - Próximo: ${nextPeriod.label} a las ${nextPeriod.start}`;
+            progFill.style.width = '0%';
+        } else {
+            infoDiv.textContent = `${diaSemana} - Fin de la jornada escolar 💤`;
+            progFill.style.width = '100%';
+        }
+    }
+    
+    let isRunning = false;
+    window.onload = () => {
+      setInterval(updateClock, 1000);
+      updateClock();
+      if(!isRunning) { isRunning = true; tick(); }
+    };
+
+    function tick(){
+      const showGuardia = document.getElementById('chkGuardia').checked;
+      const showTic = document.getElementById('chkTic').checked;
+      const showDir = document.getElementById('chkDireccion').checked;
+      const showRetrasos = document.getElementById('chkRetrasos').checked; 
+
+      const now = Date.now();
+
+      // === 1. AVISOS ===
+      if (showDir) {
+          google.script.run.withSuccessHandler(function(avisos) {
+              const container = document.getElementById('avisos-area');
+              container.classList.remove('hidden');
+              const firmaNueva = JSON.stringify(avisos);
+              if (ultimaFirmaAvisos === firmaNueva) return; 
+              ultimaFirmaAvisos = firmaNueva;
+              container.innerHTML = '';
+              if (avisos && avisos.length > 0) {
+                  avisos.forEach(aviso => {
+                      const div = document.createElement('div');
+                      div.className = 'aviso-card';
+                      div.innerHTML = `
+                          <div class="aviso-main">
+                              <div class="aviso-texto">📢 ${esc(aviso.texto)}</div>
+                              <div class="aviso-autor">De: ${esc(aviso.autor)}</div>
+                          </div>
+                          <div class="aviso-footer">
+                             <span>Publicado: ${aviso.ts_str}</span>
+                             <button class="btn-del-aviso" onclick="borrarAviso('${aviso.id}')">🗑️ Eliminar</button>
+                          </div>`;
+                      container.appendChild(div);
+                  });
+              } else {
+                  container.innerHTML = '<div style="text-align:center; color:#64748b; font-style:italic;">No hay avisos de dirección activos.</div>';
+              }
+          }).listarAvisosActivos();
+      } else {
+          document.getElementById('avisos-area').classList.add('hidden');
+          ultimaFirmaAvisos = "";
+      }
+
+      // === 2. INCIDENCIAS ===
+      google.script.run.withSuccessHandler(function(resp){
+          const itemsAll = (resp && resp.items) ? resp.items : [];
+          
+          const items = itemsAll.filter(it => {
+            const cat = (it.categoria || 'GUARDIA').toUpperCase();
+            
+            // Jefatura siempre visible
+            if (cat === 'JEFATURA') return true; 
+
+            // Cálculo de retraso (> 5 minutos)
+            const diff = now - it.ts;
+            const isDelayed = diff > (5 * 60 * 1000);
+
+            // Filtros normales
+            if (cat === 'GUARDIA' && showGuardia) return true;
+            if (cat === 'TIC' && showTic) return true;
+
+            // Filtro especial retrasos
+            if (showRetrasos && isDelayed && (cat === 'TIC' || cat === 'GUARDIA')) return true;
+
+            return false;
+          });
+
+          const serverIds = new Set(items.map(it => it.id));
+          const list = document.getElementById('list');
+          const empty = document.getElementById('empty');
+          
+          empty.style.display = items.length ? 'none' : 'block';
+
+          items.forEach(it => {
+            if (!vistos.has(it.id)) {
+              vistos.add(it.id);
+              const card = document.createElement('div');
+              card.id = 'card-' + it.id;
+              
+              // GUARDAMOS EL TIMESTAMP EN EL HTML para consultarlo en vivo luego
+              card.dataset.ts = it.ts; 
+              
+              let catClass = 'card-guardia';
+              let badgeColor = '#10b981';
+              let catLabel = 'GUARDIA';
+              let showTag = true; 
+              
+              const cat = (it.categoria || 'GUARDIA').toUpperCase();
+
+              // Colores base
+              if(cat === 'TIC') { catClass = 'card-tic'; badgeColor = '#0ea5e9'; catLabel = 'TIC'; }
+              if(cat === 'JEFATURA') { catClass = 'card-jefatura'; showTag = false; }
+
+              const tagHtml = showTag ? `<span class="tag" style="background:${badgeColor}">${catLabel}</span>` : '';
+
+              card.className = `card ${catClass}`;
+              card.innerHTML = `
+                <div class="aula">
+                  ${esc(it.aula)} 
+                  ${tagHtml}
+                  <span class="warning-container"></span> </div>
+                <div class="hora">🕒 ${it.hora} | 👤 ${esc(it.profesor)}</div>
+                <div class="obs">${esc(it.observaciones || 'Sin detalles')}</div>
+                <button class="btn" onclick="cerrar('${it.id}', this)">Marcar atendida ✅</button>
+              `;
+              list.prepend(card);
+            }
+          });
+
+          // === 3. COMPROBACIÓN EN TIEMPO REAL (FIX) ===
+          // Recorremos las tarjetas visibles para actualizar su estado de demora sin esperar a recarga
+          document.querySelectorAll('.card').forEach(c => {
+             // Limpieza de eliminadas
+             const id = c.id.replace('card-', '');
+             if (!serverIds.has(id)) {
+               c.remove();
+               vistos.delete(id);
+               return; 
+             }
+
+             // Lógica de Demora Dinámica
+             const ts = parseInt(c.dataset.ts);
+             if (ts) {
+                 const diff = Date.now() - ts;
+                 const isDelayed = diff > (5 * 60 * 1000); // 5 min
+                 
+                 // Solo aplica a TIC y GUARDIA
+                 const isTicOrGuardia = c.classList.contains('card-tic') || c.classList.contains('card-guardia') || c.classList.contains('delayed-active');
+
+                 if (isTicOrGuardia) {
+                     const warnContainer = c.querySelector('.warning-container');
+                     if (isDelayed) {
+                         // Si es tarde, añadimos clase parpadeo y badge si no existe
+                         c.classList.add('delayed-active'); 
+                         if(warnContainer && warnContainer.innerHTML === '') {
+                             warnContainer.innerHTML = `<span class="warning-badge">⚠️ DEMORA > 5 MIN</span>`;
+                         }
+                     } else {
+                         // Si no es tarde (raro, pero por si acaso), limpiamos
+                         c.classList.remove('delayed-active');
+                         if(warnContainer) warnContainer.innerHTML = '';
+                     }
+                 }
+             }
+          });
+          
+      }).listarTodoJefatura(); 
+      
+      setTimeout(tick, pollMs);
+    }
+
+    function cerrar(id, btn) {
+      btn.disabled = true; 
+      btn.textContent = "Procesando...";
+      btn.style.opacity = '0.7';
+      google.script.run.withSuccessHandler(() => {
+        const c = document.getElementById('card-'+id);
+        if(c) {
+            c.style.opacity = '0';
+            setTimeout(() => c.remove(), 500);
+        }
+      }).marcarAtendida(id);
+    }
+
+    function borrarAviso(id) {
+        if(!confirm("¿Seguro que quieres eliminar este aviso global?")) return;
+        google.script.run.withSuccessHandler(() => {
+           ultimaFirmaAvisos = ""; 
+           tick(); 
+        }).borrarMensajeDireccion(id);
+    }
+
+    function esc(s) { return s ? String(s).replace(/[&<>"]/g, tag => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[tag])) : ''; }
+  </script>
+</body>
+</html>

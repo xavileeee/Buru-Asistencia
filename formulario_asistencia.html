@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+  <style>
+    :root { --green: #10b981; --red: #ef4444; --blue: #3b82f6; --bg: #f0f2f5; }
+    body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 15px; display: flex; justify-content: center; }
+    .container { background: white; width: 100%; max-width: 420px; padding: 25px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); box-sizing: border-box; }
+    .hidden { display: none !important; }
+    h2 { margin-top: 0; text-align: center; color: #1e293b; }
+    .queue-info { background: #e0f2fe; color: #0369a1; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; margin-bottom: 20px; font-size: 0.9em; }
+    
+    label { font-weight:600; font-size:14px; color:#64748b; display:block; margin-bottom:5px; }
+    input, textarea { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; border: 2px solid #e2e8f0; box-sizing: border-box; font-size: 16px; background: #f8fafc; }
+    
+    .btn { width: 100%; padding: 16px; color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; transition: opacity 0.2s; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn:active { transform: scale(0.98); }
+
+    .btn-guardia { background: var(--green); }
+    .btn-urgente { background: var(--red); }
+    .btn-tic { background: var(--blue); }
+    
+    .status-card { text-align: center; padding: 30px 10px; }
+    .loader { display: inline-block; width: 50px; height: 50px; border: 5px solid rgba(0,0,0,0.1); border-radius: 50%; border-top-color: var(--blue); animation: spin 1s infinite linear; margin-bottom: 15px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div class="container" id="formDiv">
+  <h2>BURU-ASISTENCIA</h2>
+  <div id="queueBadge" class="queue-info">Cargando estado...</div>
+  
+  <label>📍 Aula / Ubicación</label>
+  <input type="text" id="aula" placeholder="Ej. Aula 12..." required>
+  
+  <label>📝 Motivo (Opcional)</label>
+  <textarea id="obs" rows="3" placeholder="Describe brevemente..."></textarea>
+  
+  <button class="btn btn-guardia" id="btnGuardia" onclick="enviar('NORMAL', 'GUARDIA')">
+    👋 Solicitar Ayuda (Guardia)
+  </button>
+  
+  <button class="btn btn-urgente" id="btnUrg" onclick="enviar('NORMAL', 'JEFATURA')">
+    👔 Aviso a Jefatura
+  </button>
+  
+  <button class="btn btn-tic" id="btnTic" onclick="enviar('NORMAL', 'TIC')">
+    💻 Petición TIC (Informática)
+  </button>
+</div>
+
+<div class="container hidden" id="statusDiv">
+  <div id="stepWaiting" class="status-card">
+    <div class="loader"></div>
+    <div style="font-size: 22px; font-weight: bold; margin-bottom: 10px;">Aviso Enviado</div>
+    <p>Tu petición está en el panel.<br><b>No cierres esta ventana.</b></p>
+    
+    <button id="btnCancel" class="btn" style="background: #94a3b8; margin-top: 15px;" onclick="cancelar()">⛔ Cancelar Aviso</button>
+  </div>
+  
+  <div id="stepSuccess" class="status-card hidden">
+    <span style="font-size: 60px;">✅</span>
+    <div style="font-size: 22px; font-weight: bold; margin-bottom: 10px;">¡Atendido!</div>
+    <p>La incidencia ha sido resuelta o van en camino.</p>
+    <button class="btn btn-guardia" style="margin-top: 20px;" onclick="volverAlInicio()">Nueva Petición</button>
+  </div>
+</div>
+
+<script>
+  let pollingInterval; let myId = null; let enviando = false;
+
+  window.onload = () => { actualizarContador(); };
+
+  function actualizarContador() {
+    google.script.run.withSuccessHandler(n => {
+      document.getElementById('queueBadge').innerHTML = n > 0 ? `⏳ Guardia: ${n} pendientes` : `🚀 Guardia libre`;
+    }).contarPendientesGlobales();
+  }
+
+  function enviar(tipo, categoria) {
+    if (enviando) return;
+    const aula = document.getElementById('aula').value.trim();
+    if (!aula) { alert("Indica el aula"); return; }
+    
+    enviando = true;
+    bloquearBotones(true);
+
+    const datos = {
+      aula: aula,
+      observaciones: document.getElementById('obs').value,
+      tipo: tipo,
+      categoria: categoria
+    };
+
+    google.script.run.withSuccessHandler(res => {
+      if (res.ok) {
+        myId = res.id;
+        mostrarEspera();
+        startPolling();
+      } else { 
+        alert("Error: " + res.msg); 
+        bloquearBotones(false); 
+      }
+    }).registrarIncidencia(datos);
+  }
+
+  function bloquearBotones(estado) {
+    document.getElementById('btnGuardia').disabled = estado;
+    document.getElementById('btnUrg').disabled = estado;
+    document.getElementById('btnTic').disabled = estado;
+    enviando = estado;
+  }
+
+  function mostrarEspera() {
+    document.getElementById('formDiv').classList.add('hidden');
+    document.getElementById('statusDiv').classList.remove('hidden');
+    document.getElementById('stepWaiting').classList.remove('hidden');
+    document.getElementById('stepSuccess').classList.add('hidden');
+  }
+
+  function volverAlInicio() {
+    if(pollingInterval) clearInterval(pollingInterval);
+    myId = null; enviando = false;
+    document.getElementById('aula').value = ""; document.getElementById('obs').value = "";
+    document.getElementById('statusDiv').classList.add('hidden');
+    document.getElementById('formDiv').classList.remove('hidden');
+    bloquearBotones(false);
+    
+    const btnCancel = document.getElementById('btnCancel');
+    if(btnCancel) { btnCancel.disabled = false; btnCancel.innerText = "⛔ Cancelar Aviso"; }
+    
+    actualizarContador();
+  }
+
+  function startPolling() {
+    if (pollingInterval) clearInterval(pollingInterval);
+    pollingInterval = setInterval(() => {
+      google.script.run.withSuccessHandler(res => {
+        if (res && res.estado === 'ATENDIDA') {
+          clearInterval(pollingInterval);
+          document.getElementById('stepWaiting').classList.add('hidden');
+          document.getElementById('stepSuccess').classList.remove('hidden');
+        }
+      }).checkEstadoIncidencia(myId);
+    }, 4000);
+  }
+
+  function cancelar() {
+    if(!confirm("¿Cancelar aviso?")) return;
+    const btn = document.getElementById('btnCancel');
+    btn.disabled = true; btn.innerText = "Cancelando...";
+    
+    google.script.run.withSuccessHandler(res => {
+      if(res.ok) { volverAlInicio(); }
+      else { alert("Error al cancelar"); btn.disabled = false; btn.innerText = "⛔ Cancelar Aviso"; }
+    }).cancelarIncidencia(myId);
+  }
+</script>
+</body>
+</html>
