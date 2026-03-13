@@ -7,3 +7,4 @@ creds.json
 package-lock.json
 build/
 dist/
+Config_Privada.js

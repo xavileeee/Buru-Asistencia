@@ -1,5 +1,5 @@
-/** ====== CONFIGURACIÓN ====== **/
-const SS_ID = 'TU_ID_DE_HOJA_AQUI'; // Sustituir por el ID de tu hoja de cálculo de Google
+// CONFIGURACIÓN: El SS_ID real se encuentra en Config_Privada.js (ignorado por Git)
+// const SS_ID = 'TU_ID_DE_HOJA_AQUI'; 
 const NOMBRE_HOJA_INCIDENCIAS = 'Incidencias';
 const NOMBRE_HOJA_MENSAJES = 'Mensajes';
 const TZ = 'Europe/Madrid';

@@ -1,6 +1,7 @@
 **/**
 !appsscript.json
 !*.js
+!Config_Privada.js
 !*.html
 !*.gs
 !Codigo.js
