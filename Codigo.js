@@ -296,6 +296,11 @@ function listarTodoJefatura() {
   return { items: data.items };
 }
 
-function pruebaLocal() {
-  console.log("¡Hola desde Windows Antigravity!");
+/**
+ * Función auxiliar para incluir archivos HTML dentro de otros.
+ * Es necesaria para que funcione <?!= include('...'); ?>
+ */
+function include(filename) {
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
+// v1.0.1 - Sincronizado localmente con README actualizado

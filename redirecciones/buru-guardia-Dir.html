@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirigiendo al Panel...</title>
+    
+    <style>
+        body {
+            background-color: #1e293b; /* Mismo color oscuro del panel */
+            color: #e2e8f0;
+            font-family: 'Segoe UI', Verdana, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+        }
+        h1 { margin-bottom: 10px; font-weight: 300; }
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-left-color: #3b82f6; /* Azul brillante */
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 25px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .manual-link { 
+            color: #3b82f6; 
+            text-decoration: none; 
+            font-weight: bold; 
+            border: 1px solid #3b82f6;
+            padding: 10px 20px;
+            border-radius: 8px;
+            transition: all 0.2s;
+            margin-top: 15px;
+            display: inline-block;
+        }
+        .manual-link:hover { background: #3b82f6; color: white; }
+        .subtext { color: #64748b; margin-top: 20px; font-size: 0.9em; }
+    </style>
+
+    <script>
+        // ==========================================
+        // ⚙️ CONFIGURACIÓN: CAMBIA LA URL AQUÍ
+        // ==========================================
+        const URL_DESTINO = "https://script.google.com/a/macros/iessaenzdeburuaga.es/s/AKfycbzambdAQoPs5LFd1AGXgROcaZPHO6iFDjwmRMqR1NgUKC93v4OmYNR2HhQ212ukEf7dSw/exec?view=direccion";
+        // ==========================================
+
+        // 1. Intentamos redirigir inmediatamente antes de cargar nada más
+        window.location.replace(URL_DESTINO);
+    </script>
+</head>
+<body>
+
+    <div class="loader"></div>
+    <h1>Cargando Panel de Guardia...</h1>
+    
+    <div class="subtext">
+        Si no se redirige automáticamente en unos segundos:
+        <br><br>
+        <a id="btnManual" href="#" class="manual-link">👉 Ir al Panel Manualmente</a>
+    </div>
+
+    <script>
+        // 2. Si la redirección tarda, actualizamos el botón manual con la variable
+        document.addEventListener('DOMContentLoaded', function() {
+            const btn = document.getElementById('btnManual');
+            btn.href = URL_DESTINO;
+        });
+    </script>
+
+</body>
+</html>

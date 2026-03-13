@@ -4,6 +4,9 @@
   <base target="_top">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+  
+  <?!= include('sonidos'); ?>
+
   <style>
     :root { --green: #10b981; --red: #ef4444; --blue: #3b82f6; --bg: #f0f2f5; }
     body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 15px; display: flex; justify-content: center; }
@@ -71,6 +74,10 @@
 </div>
 
 <script>
+  // === CONFIGURACIÓN SONIDO ===
+  const miAudio = new Audio(B64_NUEVO_AVISO); 
+  let audioDesbloqueado = false;
+
   let pollingInterval; let myId = null; let enviando = false;
 
   window.onload = () => { actualizarContador(); };
@@ -81,11 +88,34 @@
     }).contarPendientesGlobales();
   }
 
+  // Desbloqueo de audio silencioso al hacer clic en enviar
+  function desbloquearAudio() {
+      if (!audioDesbloqueado) {
+          miAudio.muted = true;
+          miAudio.play().then(() => {
+              miAudio.pause();
+              miAudio.currentTime = 0;
+              miAudio.muted = false;
+              audioDesbloqueado = true;
+          }).catch(e => console.log("Audio bloqueado inicialmente:", e));
+      }
+  }
+
+  function playSuccessSound() {
+      if(audioDesbloqueado) {
+          miAudio.currentTime = 0;
+          miAudio.play().catch(e => console.log("Error repro:", e));
+      }
+  }
+
   function enviar(tipo, categoria) {
     if (enviando) return;
     const aula = document.getElementById('aula').value.trim();
     if (!aula) { alert("Indica el aula"); return; }
     
+    // IMPORTANTE: Al hacer clic, desbloqueamos el audio para que suene después
+    desbloquearAudio();
+
     enviando = true;
     bloquearBotones(true);
 
@@ -142,6 +172,10 @@
       google.script.run.withSuccessHandler(res => {
         if (res && res.estado === 'ATENDIDA') {
           clearInterval(pollingInterval);
+          
+          // SONIDO DE ÉXITO AQUÍ
+          playSuccessSound();
+
           document.getElementById('stepWaiting').classList.add('hidden');
           document.getElementById('stepSuccess').classList.remove('hidden');
         }

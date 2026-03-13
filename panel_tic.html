@@ -4,12 +4,25 @@
   <base target="_top">
   <meta charset="utf-8">
   <title>Panel TIC</title>
+  
+  <?!= include('sonidos'); ?>
+
   <style>
     /* === ESTILOS GENERALES (TEMA TIC) === */
     html, body { height:100%; margin:0; font-family: 'Segoe UI', sans-serif; background:#0f172a; color:#e2e8f0; }
     .wrap { max-width:1400px; margin:0 auto; padding:20px; }
     
-    /* === HEADER CON RELOJ (Igual que Sala Guardia pero estilo TIC) === */
+    /* === CAPA INVISIBLE PARA ACTIVAR AUDIO === */
+    #click-catcher {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 9999; cursor: pointer;
+      background: rgba(0,0,0,0.6); /* Semi-transparente para indicar interacción */
+      display: flex; justify-content: center; align-items: center;
+      color: white; font-size: 2em; font-weight: bold;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+
+    /* === HEADER CON RELOJ === */
     .header-container { text-align: center; margin-bottom: 30px; padding-top: 10px; }
     h1 { margin: 0; font-size: 3.5em; color: #22d3ee; text-shadow: 0 4px 10px rgba(0,0,0,0.5); letter-spacing: 2px; font-weight: 800; text-transform: uppercase; }
     .subtitulo { margin-top: 5px; font-size: 1.8em; color: #94a3b8; font-weight: 400; letter-spacing: 1px; }
@@ -25,6 +38,18 @@
     .period-info { flex-grow: 1; text-align: center; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 1px 1px 3px rgba(0,0,0,0.2); }
     .progress-container { width: 30%; min-width: 200px; height: 24px; background: rgba(255, 255, 255, 0.3); border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.2); }
     .progress-fill { height: 100%; background: #ffffff; width: 0%; transition: width 1s linear; border-radius: 12px; box-shadow: 0 0 15px rgba(255,255,255,0.6); }
+
+    /* === BARRA DE CONTROL DE SONIDO === */
+    .sound-bar {
+        display: flex; justify-content: center; margin-bottom: 20px;
+    }
+    .btn-sound {
+        background: #1e293b; color: #94a3b8; border: 1px solid #334155; 
+        padding: 10px 20px; border-radius: 20px; font-weight: bold; cursor: pointer; 
+        transition: all 0.2s; font-size: 1rem;
+    }
+    .btn-sound:hover { background: #334155; color: white; }
+    .btn-sound.active { background: #0ea5e9; color: white; border-color: #38bdf8; box-shadow: 0 0 10px rgba(14, 165, 233, 0.5); }
 
     /* === GRID DE TARJETAS === */
     .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:15px; }
@@ -45,6 +70,10 @@
   </style>
 </head>
 <body>
+  <div id="click-catcher" onclick="activarAudioInicial()">
+    👆 Haz clic aquí para activar el panel TIC
+  </div>
+
   <div class="wrap">
     
     <div class="status-bar">
@@ -60,6 +89,12 @@
       <div class="subtitulo">Gestión de Incidencias Informáticas</div>
     </div>
 
+    <div class="sound-bar">
+        <button class="btn-sound" id="mainSoundBtn" onclick="toggleSonido()">
+            <span id="sndLabel">🔇 Sonido OFF (Activar)</span>
+        </button>
+    </div>
+
     <div id="list" class="grid"></div>
     <div id="empty" class="empty-state">Todo funciona correctamente (por ahora) ☕</div>
   </div>
@@ -67,8 +102,37 @@
   <script>
     const pollMs = 5000; 
     let vistos = new Set();
+    
+    // === CONFIGURACIÓN SONIDO ===
+    const miAudio = new Audio(B64_NUEVO_AVISO); 
+    let sonidoActivo = false;
+    let audioDesbloqueado = false;
 
-    // === HORARIOS (Para la barra de progreso) ===
+    // Función que se ejecuta al pulsar el overlay inicial
+    function activarAudioInicial() {
+      // 1. Ocultar el overlay
+      document.getElementById('click-catcher').style.display = 'none';
+      
+      // 2. Activar el botón de sonido visualmente
+      sonidoActivo = true;
+      const btn = document.getElementById('mainSoundBtn');
+      const label = document.getElementById('sndLabel');
+      btn.classList.add('active');
+      label.textContent = '🔊 Sonido ON';
+      
+      // 3. Desbloquear el audio (truco del play/pause inmediato)
+      if (!audioDesbloqueado) {
+        miAudio.muted = true;
+        miAudio.play().then(() => {
+          miAudio.pause();
+          miAudio.currentTime = 0;
+          miAudio.muted = false;
+          audioDesbloqueado = true;
+        }).catch(e => console.log("Error desbloqueo audio:", e));
+      }
+    }
+
+    // === HORARIOS ===
     const HORARIOS = [
         { label: "1ª Hora", start: "08:30", end: "09:25" },
         { label: "2ª Hora", start: "09:25", end: "10:20" },
@@ -123,6 +187,37 @@
     }
     setInterval(updateClock, 1000);
 
+    // === GESTIÓN DE SONIDO ===
+    function toggleSonido() {
+        sonidoActivo = !sonidoActivo;
+        const btn = document.getElementById('mainSoundBtn');
+        const label = document.getElementById('sndLabel');
+        
+        if (sonidoActivo) {
+            btn.classList.add('active');
+            label.textContent = '🔊 Sonido ON';
+            if (!audioDesbloqueado) {
+                miAudio.muted = true;
+                miAudio.play().catch(() => {});
+                setTimeout(() => { 
+                    miAudio.pause(); 
+                    miAudio.currentTime = 0; 
+                    miAudio.muted = false; 
+                }, 100);
+                audioDesbloqueado = true;
+            }
+        } else {
+            btn.classList.remove('active');
+            label.textContent = '🔇 Sonido OFF (Activar)';
+        }
+    }
+
+    function tryPlay() {
+        if (!sonidoActivo) return;
+        miAudio.currentTime = 0;
+        miAudio.play().catch(e => console.error("Error audio:", e));
+    }
+
     // === LÓGICA DE CARGA DE DATOS ===
     function tick(){
       google.script.run.withSuccessHandler(function(resp){
@@ -146,6 +241,9 @@
                 <button class="btn" onclick="cerrar('${it.id}', this)">✅ Hecho</button>
               `;
               list.prepend(card);
+              
+              // Reproducir sonido al entrar nueva tarjeta
+              tryPlay();
             }
           });
 

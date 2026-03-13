@@ -2,3 +2,8 @@ node_modules/
 .clasp.json
 .DS_Store
 thumbs.db
+creds.json
+*.log
+package-lock.json
+build/
+dist/

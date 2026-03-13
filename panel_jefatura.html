@@ -4,11 +4,24 @@
   <base target="_top">
   <meta charset="utf-8">
   <title>Panel Jefatura</title>
+  
+  <?!= include('sonidos'); ?>
+
   <style>
     /* === ESTILOS GENERALES === */
     html, body { height:100%; margin:0; font-family: 'Segoe UI', sans-serif; background:#1e293b; color:#e2e8f0; }
     .wrap { max-width:1400px; margin:0 auto; padding:20px; }
     
+    /* === CAPA INVISIBLE PARA ACTIVAR AUDIO === */
+    #click-catcher {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 9999; cursor: pointer;
+      background: rgba(0,0,0,0.6); 
+      display: flex; justify-content: center; align-items: center;
+      color: white; font-size: 2em; font-weight: bold;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+
     /* === STATUS BAR AZUL === */
     .status-bar {
       background: #3b82f6; 
@@ -22,9 +35,20 @@
     .progress-fill { height: 100%; background: #ffffff; width: 0%; transition: width 1s linear; border-radius: 12px; box-shadow: 0 0 15px rgba(255,255,255,0.6); }
 
     /* === CABECERA === */
-    .header-container { text-align: center; margin-bottom: 30px; padding-top: 10px; }
+    .header-container { text-align: center; margin-bottom: 20px; padding-top: 10px; }
     h1 { margin: 0; font-size: 3.5em; color: #facc15; text-shadow: 0 4px 10px rgba(0,0,0,0.5); letter-spacing: 2px; font-weight: 800; text-transform: uppercase; }
     .subtitulo { margin-top: 5px; font-size: 1.8em; color: #94a3b8; font-weight: 400; letter-spacing: 1px; }
+
+    /* === BOTÓN DE SONIDO === */
+    .sound-bar { display: flex; justify-content: center; margin-bottom: 20px; }
+    .btn-sound {
+        background: #0f172a; color: #94a3b8; border: 1px solid #334155; 
+        padding: 8px 20px; border-radius: 20px; font-weight: bold; cursor: pointer; 
+        transition: all 0.2s; font-size: 1rem; display: flex; align-items: center; gap: 8px;
+    }
+    .btn-sound:hover { background: #334155; color: white; }
+    .btn-sound.active { background: #3b82f6; color: white; border-color: #60a5fa; box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
+
 
     /* BARRA DE FILTROS */
     .filter-bar {
@@ -61,7 +85,6 @@
     .card-guardia { border-left-color: #10b981; }
 
     /* === NUEVO: Estilo Dinámico para Retrasos === */
-    /* Mantenemos el color de fondo original, solo añadimos borde rojo y pulso */
     .delayed-active {
         box-shadow: 0 0 0 2px #ef4444 inset; /* Borde interno rojo */
         animation: pulseRed 2s infinite; 
@@ -97,6 +120,10 @@
   </style>
 </head>
 <body>
+  <div id="click-catcher" onclick="activarAudioInicial()">
+    👆 Haz clic aquí para activar el panel Jefatura
+  </div>
+
   <div class="wrap">
     
     <div class="status-bar">
@@ -110,6 +137,12 @@
     <div class="header-container">
       <h1>BURU-GUARDIA</h1>
       <div class="subtitulo">Panel de Jefatura</div>
+    </div>
+
+    <div class="sound-bar">
+        <button class="btn-sound" id="mainSoundBtn" onclick="toggleSonido()">
+            <span id="sndLabel">🔇 Sonido OFF (Activar)</span>
+        </button>
     </div>
 
     <div class="filter-bar">
@@ -147,6 +180,35 @@
     const pollMs = 5000; 
     let vistos = new Set();
     let ultimaFirmaAvisos = ""; 
+    
+    // === CONFIGURACIÓN SONIDO ===
+    const miAudio = new Audio(B64_NUEVO_AVISO); 
+    let sonidoActivo = false;
+    let audioDesbloqueado = false;
+
+    // Función que se ejecuta al pulsar el overlay inicial
+    function activarAudioInicial() {
+      // 1. Ocultar el overlay
+      document.getElementById('click-catcher').style.display = 'none';
+      
+      // 2. Activar el botón de sonido visualmente
+      sonidoActivo = true;
+      const btn = document.getElementById('mainSoundBtn');
+      const label = document.getElementById('sndLabel');
+      btn.classList.add('active');
+      label.textContent = '🔊 Sonido ON';
+      
+      // 3. Desbloquear el audio (truco del play/pause inmediato)
+      if (!audioDesbloqueado) {
+        miAudio.muted = true;
+        miAudio.play().then(() => {
+          miAudio.pause();
+          miAudio.currentTime = 0;
+          miAudio.muted = false;
+          audioDesbloqueado = true;
+        }).catch(e => console.log("Error desbloqueo audio:", e));
+      }
+    }
 
     // === HORARIOS ===
     const HORARIOS = [
@@ -201,6 +263,37 @@
             progFill.style.width = '100%';
         }
     }
+
+    // === GESTIÓN DE SONIDO ===
+    function toggleSonido() {
+        sonidoActivo = !sonidoActivo;
+        const btn = document.getElementById('mainSoundBtn');
+        const label = document.getElementById('sndLabel');
+        
+        if (sonidoActivo) {
+            btn.classList.add('active');
+            label.textContent = '🔊 Sonido ON';
+            if (!audioDesbloqueado) {
+                miAudio.muted = true;
+                miAudio.play().catch(() => {});
+                setTimeout(() => { 
+                    miAudio.pause(); 
+                    miAudio.currentTime = 0; 
+                    miAudio.muted = false; 
+                }, 100);
+                audioDesbloqueado = true;
+            }
+        } else {
+            btn.classList.remove('active');
+            label.textContent = '🔇 Sonido OFF (Activar)';
+        }
+    }
+
+    function tryPlay() {
+        if (!sonidoActivo) return;
+        miAudio.currentTime = 0;
+        miAudio.play().catch(e => console.error("Error audio:", e));
+    }
     
     let isRunning = false;
     window.onload = () => {
@@ -224,6 +317,10 @@
               container.classList.remove('hidden');
               const firmaNueva = JSON.stringify(avisos);
               if (ultimaFirmaAvisos === firmaNueva) return; 
+              
+              // Si cambia la lista de avisos (y no es el inicio vacío), suena
+              if(ultimaFirmaAvisos !== "" && avisos.length > 0) tryPlay();
+              
               ultimaFirmaAvisos = firmaNueva;
               container.innerHTML = '';
               if (avisos && avisos.length > 0) {
@@ -257,18 +354,13 @@
           const items = itemsAll.filter(it => {
             const cat = (it.categoria || 'GUARDIA').toUpperCase();
             
-            // Jefatura siempre visible
             if (cat === 'JEFATURA') return true; 
 
-            // Cálculo de retraso (> 5 minutos)
             const diff = now - it.ts;
             const isDelayed = diff > (5 * 60 * 1000);
 
-            // Filtros normales
             if (cat === 'GUARDIA' && showGuardia) return true;
             if (cat === 'TIC' && showTic) return true;
-
-            // Filtro especial retrasos
             if (showRetrasos && isDelayed && (cat === 'TIC' || cat === 'GUARDIA')) return true;
 
             return false;
@@ -285,8 +377,6 @@
               vistos.add(it.id);
               const card = document.createElement('div');
               card.id = 'card-' + it.id;
-              
-              // GUARDAMOS EL TIMESTAMP EN EL HTML para consultarlo en vivo luego
               card.dataset.ts = it.ts; 
               
               let catClass = 'card-guardia';
@@ -296,7 +386,6 @@
               
               const cat = (it.categoria || 'GUARDIA').toUpperCase();
 
-              // Colores base
               if(cat === 'TIC') { catClass = 'card-tic'; badgeColor = '#0ea5e9'; catLabel = 'TIC'; }
               if(cat === 'JEFATURA') { catClass = 'card-jefatura'; showTag = false; }
 
@@ -313,13 +402,14 @@
                 <button class="btn" onclick="cerrar('${it.id}', this)">Marcar atendida ✅</button>
               `;
               list.prepend(card);
+
+              // Sonido al entrar nueva tarjeta
+              tryPlay();
             }
           });
 
           // === 3. COMPROBACIÓN EN TIEMPO REAL (FIX) ===
-          // Recorremos las tarjetas visibles para actualizar su estado de demora sin esperar a recarga
           document.querySelectorAll('.card').forEach(c => {
-             // Limpieza de eliminadas
              const id = c.id.replace('card-', '');
              if (!serverIds.has(id)) {
                c.remove();
@@ -327,25 +417,21 @@
                return; 
              }
 
-             // Lógica de Demora Dinámica
              const ts = parseInt(c.dataset.ts);
              if (ts) {
                  const diff = Date.now() - ts;
-                 const isDelayed = diff > (5 * 60 * 1000); // 5 min
+                 const isDelayed = diff > (5 * 60 * 1000); 
                  
-                 // Solo aplica a TIC y GUARDIA
                  const isTicOrGuardia = c.classList.contains('card-tic') || c.classList.contains('card-guardia') || c.classList.contains('delayed-active');
 
                  if (isTicOrGuardia) {
                      const warnContainer = c.querySelector('.warning-container');
                      if (isDelayed) {
-                         // Si es tarde, añadimos clase parpadeo y badge si no existe
                          c.classList.add('delayed-active'); 
                          if(warnContainer && warnContainer.innerHTML === '') {
                              warnContainer.innerHTML = `<span class="warning-badge">⚠️ DEMORA > 5 MIN</span>`;
                          }
                      } else {
-                         // Si no es tarde (raro, pero por si acaso), limpiamos
                          c.classList.remove('delayed-active');
                          if(warnContainer) warnContainer.innerHTML = '';
                      }
