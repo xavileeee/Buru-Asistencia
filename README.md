@@ -88,10 +88,11 @@ Para que este proyecto funcione en tu propio centro, debes realizar los siguient
 1. Crea una nueva Hoja de Cálculo de Google.
 2. Crea tres pestañas con los nombres exactos: `Incidencias`, `Mensajes` y `Archivo_Incidencias`.
 3. Copia el **ID de la hoja de cálculo** (está en la URL entre `/d/` y `/edit`).
-4. Abre `Codigo.js` y sustituye el valor de la constante `SS_ID`:
+4. Utiliza el archivo `Config_Example.js` como base: crea un nuevo archivo llamado `Config_Privada.js` y pega allí tu ID:
    ```javascript
    const SS_ID = 'TU_ID_DE_AQUÍ';
    ```
+   *Nota: `Config_Privada.js` está excluido de Git para proteger tu privacidad.*
 
 ### 2. Estructura de Columnas
 Asegúrate de que las cabeceras de tus hojas sigan este orden (opcional pero recomendado):
