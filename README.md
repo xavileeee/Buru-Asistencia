@@ -21,6 +21,18 @@ La aplicación utiliza parámetros en la URL (`query parameters`) para determina
 | `?view=tic` | **Soporte TIC** | Panel para el administrador informático. Muestra incidencias técnicas. |
 | `?view=jefatura`| **Jefatura** | Panel de control total y gestión de todas las incidencias. |
 | `?view=direccion`| **Dirección** | Interfaz para gestionar avisos globales y mensajes. |
+<img width="371" height="495" alt="Image" src="https://github.com/user-attachments/assets/c3cd9988-17c0-4475-83d4-ae093d0150b5" />
+
+<img width="371" height="300" alt="Image" src="https://github.com/user-attachments/assets/f8cb9eab-3e57-4c8b-86ab-8d2dc755bb66" />
+
+<img width="1518" height="753" alt="Image" src="https://github.com/user-attachments/assets/add00e11-ae1c-44b8-b13f-011c69de4826" />
+
+<img width="1111" height="496" alt="Image" src="https://github.com/user-attachments/assets/c095eb87-229e-4b60-9a96-17c238452519" />
+
+<img width="1358" height="810" alt="Image" src="https://github.com/user-attachments/assets/490c3949-e9c3-4460-a209-f561093da8b7" />
+
+<img width="810" height="594" alt="Image" src="https://github.com/user-attachments/assets/ffef972a-418a-46e1-a044-3750714c55b7" />
+
 
 ## 🚀 Despliegue (Deployment)
 
