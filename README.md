@@ -68,6 +68,34 @@ Si tras actualizar los archivos HTML notas que los Kioscos siguen cargando la ve
   `const url_destino = "https://script.google.com/.../exec?v=" + Math.random();`
 - Esto hará que el navegador del terminal interprete que es una dirección nueva y descarte cualquier versión en caché, cargando siempre el código más reciente.
 
+## ⚙️ Configuración Inicial
+
+Para que este proyecto funcione en tu propio centro, debes realizar los siguientes ajustes:
+
+### 1. Google Sheets como Base de Datos
+1. Crea una nueva Hoja de Cálculo de Google.
+2. Crea tres pestañas con los nombres exactos: `Incidencias`, `Mensajes` y `Archivo_Incidencias`.
+3. Copia el **ID de la hoja de cálculo** (está en la URL entre `/d/` y `/edit`).
+4. Abre `Codigo.js` y sustituye el valor de la constante `SS_ID`:
+   ```javascript
+   const SS_ID = 'TU_ID_DE_AQUÍ';
+   ```
+
+### 2. Estructura de Columnas
+Asegúrate de que las cabeceras de tus hojas sigan este orden (opcional pero recomendado):
+- **Incidencias**: Timestamp, Fecha, Hora, Nombre, Email, Aula, Observaciones, Tipo, Estado, ID, Categoría.
+
+### 3. Activar Servicios de Google
+En el editor de Google Apps Script, ve a la sección de **Servicios (+)** y añade:
+- **Admin SDK API**: Necesario para que la función `obtenerNombreCompleto()` pueda traducir el email del profesor a su nombre real.
+
+## 🛠️ Tecnologías y Desarrollo
+
+- **Motor**: Google Apps Script (GAS) con integración de `CacheService` para velocidad extrema.
+- **Frontend**: HTML5, CSS (Vanilla), JavaScript (Vanilla).
+- **Notificaciones**: Integración de audio mediante archivos HTML inyectados (`sonidos.html`).
+- **Gestión Local**: Desarrollado y sincronizado mediante [clasp](https://github.com/google/clasp).
+
 ---
 *Mantenido por el equipo del IES Sáenz de Buruaga.*
 

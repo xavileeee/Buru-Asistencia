@@ -1,5 +1,5 @@
 /** ====== CONFIGURACIÓN ====== **/
-const SS_ID = '1yaesbEmAvS_cqURVBqHvz2733umekViIDz-f4rfs1CM';
+const SS_ID = 'TU_ID_DE_HOJA_AQUI'; // Sustituir por el ID de tu hoja de cálculo de Google
 const NOMBRE_HOJA_INCIDENCIAS = 'Incidencias';
 const NOMBRE_HOJA_MENSAJES = 'Mensajes';
 const TZ = 'Europe/Madrid';
