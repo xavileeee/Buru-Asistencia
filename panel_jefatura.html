@@ -177,9 +177,11 @@
   </div>
 
   <script>
+    const appUrl = "<?= ScriptApp.getService().getUrl() ?>";
     const pollMs = 5000; 
     let vistos = new Set();
     let ultimaFirmaAvisos = ""; 
+    let fallosConsecutivos = 0;
     
     // === CONFIGURACIÓN SONIDO ===
     const miAudio = new Audio(B64_NUEVO_AVISO); 
@@ -349,6 +351,7 @@
 
       // === 2. INCIDENCIAS ===
       google.script.run.withSuccessHandler(function(resp){
+          fallosConsecutivos = 0;
           const itemsAll = (resp && resp.items) ? resp.items : [];
           
           const items = itemsAll.filter(it => {
@@ -439,6 +442,11 @@
              }
           });
           
+      }).withFailureHandler(function() {
+          fallosConsecutivos++;
+          if (fallosConsecutivos >= 3) {
+             window.top.location.href = appUrl + "?view=jefatura&v=" + Math.random();
+          }
       }).listarTodoJefatura(); 
       
       setTimeout(tick, pollMs);

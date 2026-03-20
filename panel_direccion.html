@@ -88,6 +88,7 @@
   </div>
 
   <script>
+    const appUrl = "<?= ScriptApp.getService().getUrl() ?>";
     const PERIODOS = [
       { label: "1ª Hora", start: "08:30", end: "09:25" },
       { label: "2ª Hora", start: "09:25", end: "10:20" },
@@ -100,6 +101,7 @@
 
     let modoActual = 'hoy';
     let lastSignature = ""; 
+    let fallosConsecutivos = 0;
 
     function initSelectors() {
       const sI = document.getElementById('pInicio');
@@ -150,6 +152,7 @@
     // === FUNCIÓN DE CARGA AUTOMÁTICA (POLLING) ===
     function cargar() {
       google.script.run.withSuccessHandler(msgsAll => {
+        fallosConsecutivos = 0;
         const div = document.getElementById('lista');
         
         // === FILTRO: Eliminamos los que ya han caducado (fecha fin < ahora) ===
@@ -183,7 +186,12 @@
         setTimeout(cargar, 4000);
 
       }).withFailureHandler(() => {
-         setTimeout(cargar, 6000);
+          fallosConsecutivos++;
+          if (fallosConsecutivos >= 3) {
+             window.top.location.href = appUrl + "?view=direccion&v=" + Math.random();
+          } else {
+             setTimeout(cargar, 6000);
+          }
       }).listarMensajesAdmin();
     }
 

@@ -120,9 +120,11 @@
   </div>
 
   <script>
+    const appUrl = "<?= ScriptApp.getService().getUrl() ?>";
     const pollMs = 1000;
     const list = document.getElementById('list');
     const info = document.getElementById('info');
+    let fallosConsecutivos = 0;
     
     // === CONFIGURACIÓN DE SONIDO ===
     const miAudio = new Audio(B64_NUEVO_AVISO); 
@@ -326,6 +328,7 @@
 
     function tick() {
       google.script.run.withSuccessHandler(function (resp) {
+        fallosConsecutivos = 0;
         const itemsServer = (resp && resp.items) ? resp.items : [];
         const now = Date.now();
 
@@ -359,7 +362,14 @@
 
         if (itemsFiltrados.length === 0) updateHeader();
         setTimeout(tick, pollMs);
-      }).withFailureHandler(function () { setTimeout(tick, pollMs + 2000); }).listarPendientesSimple();
+      }).withFailureHandler(function () {
+        fallosConsecutivos++;
+        if (fallosConsecutivos >= 3) {
+          window.top.location.href = appUrl + "?view=panel&v=" + Math.random();
+        } else {
+          setTimeout(tick, pollMs + 2000);
+        }
+      }).listarPendientesSimple();
     }
 
     document.addEventListener('DOMContentLoaded', () => tick());

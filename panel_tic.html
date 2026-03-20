@@ -100,8 +100,10 @@
   </div>
 
   <script>
+    const appUrl = "<?= ScriptApp.getService().getUrl() ?>";
     const pollMs = 5000; 
     let vistos = new Set();
+    let fallosConsecutivos = 0;
     
     // === CONFIGURACIÓN SONIDO ===
     const miAudio = new Audio(B64_NUEVO_AVISO); 
@@ -221,6 +223,7 @@
     // === LÓGICA DE CARGA DE DATOS ===
     function tick(){
       google.script.run.withSuccessHandler(function(resp){
+          fallosConsecutivos = 0;
           const items = (resp && resp.items) ? resp.items : [];
           const serverIds = new Set(items.map(it => it.id));
           const list = document.getElementById('list');
@@ -256,6 +259,13 @@
           });
 
           setTimeout(tick, pollMs);
+      }).withFailureHandler(function () {
+          fallosConsecutivos++;
+          if (fallosConsecutivos >= 3) {
+            window.top.location.href = appUrl + "?view=tic&v=" + Math.random();
+          } else {
+            setTimeout(tick, pollMs + 2000);
+          }
       }).listarPendientesTIC(); 
     }
 
