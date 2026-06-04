@@ -1,0 +1,14 @@
+**/**
+!appsscript.json
+!*.js
+!Config_Privada.js
+!*.html
+!*.gs
+!Codigo.js
+!formulario_asistencia.html
+!panel.html
+!panel_direccion.html
+!panel_jefatura.html
+!panel_tic.html
+!sonidos.html
+Config_Example.js
